@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="@string/category_reading">
+        <EditTextPreference
+            android:title="@string/edit_text_preference_time_1"
+            android:key="time1"
+            android:defaultValue="200"/>
+        <EditTextPreference
+            android:title="@string/edit_text_preference_time_2"
+            android:key="time2"
+            android:defaultValue="300"/>
+    </PreferenceCategory>
+</PreferenceScreen>

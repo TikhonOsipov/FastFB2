@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Fast FB2</string>
+
+    <string name="greetings">Open FB2 book</string>
+    <string name="action_settings">Settings</string>
+    <string name="category_reading"/>
+    <string name="edit_text_preference_time_1">Time 1</string>
+    <string name="edit_text_preference_time_2">Time 2</string>
+</resources>
