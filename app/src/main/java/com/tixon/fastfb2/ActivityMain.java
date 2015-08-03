@@ -1,6 +1,7 @@
 package com.tixon.fastfb2;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
@@ -45,7 +46,7 @@ public class ActivityMain extends ActionBarActivity {
     DocumentBuilder builder;
     Document document;
     String[] words;
-    ArrayList<Section> chapters;
+    public static ArrayList<Section> chapters;
     int savedPosition = 0;
     int time1 = 199;
     int time2 = 299;
@@ -57,6 +58,11 @@ public class ActivityMain extends ActionBarActivity {
     private static final String KEY_SAVED_POSITION = "key_saved_position";
     private static final String KEY_IS_READING = "key_is_reading";
     private static final String KEY_IS_PAUSED = "key_is_paused";
+
+    private static final String KEY_TITLES = "array_list_titles";
+    private static final String KEY_SUBTITLES = "array_list_subtitles";
+    private static final int REQUEST_CODE_SECTIONS = 6;
+
     //Threads
     Thread readThread;
     AsyncReader asyncReader;
@@ -130,7 +136,7 @@ public class ActivityMain extends ActionBarActivity {
                         word += " " + words[i+1];
                         i++;
                     }
-                    if(i == words.length - 5) {
+                    if(i == words.length - 5) { //Debug only
                         System.out.println(1);
                     }
                     if(i == words.length - 1) { //Конец главы
@@ -153,12 +159,10 @@ public class ActivityMain extends ActionBarActivity {
                         }
                     });
                     if(isNext) {
-                        //Log.d("myLogs", "savedPosition = " + savedPosition + ", words.length = " + words.length);
                         savedPosition = words.length - 1;
                         break;
                     }
                     try {
-                        //== word.length() - 1
                         if((word.contains(".")) ||
                                 (word.contains(",")) ||
                                 (word.contains(";")) ||
@@ -364,4 +368,17 @@ public class ActivityMain extends ActionBarActivity {
         String result = String.valueOf(progress);
         return result.substring(0, result.indexOf(".") + 2);
     }
+
+    /*public static void startSectionsActivity(Context context) {
+        ArrayList<String> titles = new ArrayList<>();
+        ArrayList<String> subtitles = new ArrayList<>();
+        for(int i = 0; i < chapters.size(); i++) {
+            titles.add(chapters.get(i).title);
+            subtitles.add(chapters.get(i).subtitle);
+        }
+        Intent intentStartSectionsActivity = new Intent(context, ActivitySections.class);
+        intentStartSectionsActivity.putStringArrayListExtra(KEY_TITLES, titles);
+        intentStartSectionsActivity.putStringArrayListExtra(KEY_SUBTITLES, subtitles);
+
+    }*/
 }

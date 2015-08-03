@@ -96,7 +96,7 @@ public class Fb2Parser {
         NodeList nodeList = null;
         for(int i = 0; i < where.getLength(); i++) {
             if(where.item(i) instanceof Element) {
-                if(((Element) where.item(i) != null) && ((Element) where.item(i)).getTagName().equals(condition)) {
+                if((where.item(i) != null) && ((Element) where.item(i)).getTagName().equals(condition)) {
                     nodeList = where.item(i).getChildNodes();
                 }
             }
