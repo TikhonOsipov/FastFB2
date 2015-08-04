@@ -4,20 +4,19 @@ import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -67,6 +66,7 @@ public class ActivityMain extends AppCompatActivity {
     TextView textView, progress, author, bookName, title, subtitle;
     LinearLayout layoutControl, layoutBookInfo, layoutChapter;
     FrameLayout pageLeft, pageRight;
+    Toolbar toolbar;
     //ImageButton playPause;
     //Button nextChapter;
     android.support.design.widget.FloatingActionButton fab;
@@ -85,10 +85,11 @@ public class ActivityMain extends AppCompatActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            getWindow().setStatusBarColor(getResources().getColor(R.color.primary700));
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         Log.d("myLogs", "in onCreate: time1 = " + time1 + ", time2 = " + time2);
         of = getResources().getString(R.string.progress_word_of);
-
 
         asyncReader = new AsyncReader();
         if(savedInstanceState == null) {
@@ -117,6 +118,10 @@ public class ActivityMain extends AppCompatActivity {
         pageRight = (FrameLayout) findViewById(R.id.page_right);
 
         fab = (FloatingActionButton) findViewById(R.id.floatingActionButton);
+
+        toolbar = (Toolbar) findViewById(R.id.activity_main_toolbar);
+        toolbar.setTitle(R.string.app_name);
+        setSupportActionBar(toolbar);
 
         //Runnable
 
@@ -151,12 +156,12 @@ public class ActivityMain extends AppCompatActivity {
                         public void run() {
                             textView.setText(wordToShow);
                             progress.setText(calculateProgress(currentPosition, words.length));
+                            if(currentPosition == words.length - 1) fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
                             if(isNext) {
                                 //nextChapter.setVisibility(View.VISIBLE);
                                 //playPause.setVisibility(View.GONE);
                                 fab.setImageResource(R.drawable.ic_skip_next_white_48dp);
                             }
-                            //if(currentPosition == words.length - 1) fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
                         }
                     });
                     if(isNext) {
@@ -164,14 +169,17 @@ public class ActivityMain extends AppCompatActivity {
                         break;
                     }
                     try {
-                        if((word.contains(".")) ||
-                                (word.contains(",")) ||
-                                (word.contains(";")) ||
-                                (word.contains(":")) ||
-                                (word.contains("!")) ||
-                                (word.contains("?")))
-                            Thread.sleep(time2);
-                        else Thread.sleep(time1);
+                        int tTime1, tTime2;
+                        tTime1 = time1; tTime2 = time2;
+                        if(word.length() > 10) {
+                            tTime1 += (word.length() - 10) * time1/8;
+                            tTime2 += (word.length() - 10) * time2/8;
+                        }
+                        if((word.contains(".")) || (word.contains(",")) ||
+                                (word.contains(";")) || (word.contains(":")) ||
+                                (word.contains("!")) || (word.contains("?")))
+                            Thread.sleep(tTime2);
+                        else Thread.sleep(tTime1);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -219,6 +227,7 @@ public class ActivityMain extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                progress.setVisibility(View.VISIBLE);
                 if(isNext) {
                     chapterNumber++;
                     savedPosition = 0;
@@ -249,45 +258,6 @@ public class ActivityMain extends AppCompatActivity {
                 }
             }
         });
-
-        /*playPause.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(!isReading) {
-                    readThread = new Thread(runnable);
-                    readThread.start();
-                    isReading = true;
-                    isPaused = false;
-                    playPause.setImageResource(R.drawable.ic_pause_grey600_48dp);
-                } else {
-                    try {
-                        readThread.interrupt();
-                        isReading = false;
-                        isPaused = true;
-                        playPause.setImageResource(R.drawable.ic_play_arrow_grey600_48dp);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });*/
-
-        /*nextChapter.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                chapterNumber++;
-                savedPosition = 0;
-                words = chapters.get(chapterNumber).text.split(" ");
-                textView.setText(words[0]);
-                title.setText(chapters.get(chapterNumber).title);
-                subtitle.setText(chapters.get(chapterNumber).subtitle);
-                playPause.setVisibility(View.VISIBLE);
-                playPause.setImageResource(R.drawable.ic_play_arrow_grey600_48dp);
-                nextChapter.setVisibility(View.GONE);
-                progress.setText(calculateProgress(savedPosition, words.length));
-                isNext = false;
-            }
-        });*/
     }
 
     @Override
@@ -424,6 +394,8 @@ public class ActivityMain extends AppCompatActivity {
             savedPosition = 0;
             isReading = false; isPaused = false; isNext = false;
             fab.setVisibility(View.VISIBLE);
+            fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+            progress.setVisibility(View.GONE);
         }
     }
 
