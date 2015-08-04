@@ -5,4 +5,6 @@
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_open" android:title="Open file"
         app:showAsAction="never"/>
+    <item android:id="@+id/action_sections" android:title="Chapters"
+        app:showAsAction="never"/>
 </menu>

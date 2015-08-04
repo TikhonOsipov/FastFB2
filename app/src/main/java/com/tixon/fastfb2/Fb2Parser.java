@@ -11,7 +11,7 @@ public class Fb2Parser {
     public NodeList nodeList;
     public ArrayList<Element> elements;
 
-    public static ArrayList<Section> sections = new ArrayList<>();
+    public static ArrayList<Section> sections;
     public static TitleInfo titleInfo;
     public static DocumentInfo documentInfo;
 
@@ -41,6 +41,7 @@ public class Fb2Parser {
 
     public Fb2Parser(Document document) {
         elements = new ArrayList<>();
+        sections = new ArrayList<>();
         documentElement = document.getDocumentElement();
     }
 

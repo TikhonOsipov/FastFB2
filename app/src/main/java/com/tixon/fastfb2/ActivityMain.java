@@ -1,15 +1,16 @@
 package com.tixon.fastfb2;
 
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,39 +22,32 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.IOError;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 
-public class ActivityMain extends ActionBarActivity {
+public class ActivityMain extends AppCompatActivity {
 
     SharedPreferences preferences;
     DocumentBuilder builder;
     Document document;
     String[] words;
     public static ArrayList<Section> chapters;
+    public ArrayList<String> titles, subtitles, texts;
     int savedPosition = 0;
     int time1 = 199;
     int time2 = 299;
-    public int sectionNumber = 0;
+    public int chapterNumber = 0;
     boolean isReading = false;
     boolean isPaused = false;
     boolean isNext = false;
+
+    public static String of;
+
     private static final String KEY_WORDS = "key_words";
     private static final String KEY_SAVED_POSITION = "key_saved_position";
     private static final String KEY_IS_READING = "key_is_reading";
@@ -61,6 +55,9 @@ public class ActivityMain extends ActionBarActivity {
 
     private static final String KEY_TITLES = "array_list_titles";
     private static final String KEY_SUBTITLES = "array_list_subtitles";
+    private static final String KEY_TEXTS = "array_list_texts";
+
+    private static final String KEY_CHAPTER = "key_chapter";
     private static final int REQUEST_CODE_SECTIONS = 6;
 
     //Threads
@@ -70,8 +67,9 @@ public class ActivityMain extends ActionBarActivity {
     TextView textView, progress, author, bookName, title, subtitle;
     LinearLayout layoutControl, layoutBookInfo, layoutChapter;
     FrameLayout pageLeft, pageRight;
-    ImageButton playPause;
-    Button nextChapter;
+    //ImageButton playPause;
+    //Button nextChapter;
+    android.support.design.widget.FloatingActionButton fab;
 
     @Override
     protected void onResume() {
@@ -80,6 +78,7 @@ public class ActivityMain extends ActionBarActivity {
         time1 = Integer.parseInt(preferences.getString("time1", "200"));
         time2 = Integer.parseInt(preferences.getString("time2", "300"));
         Log.d("myLogs", "in onResume: time1 = " + time1 + ", time2 = " + time2);
+
     }
 
     @Override
@@ -88,6 +87,8 @@ public class ActivityMain extends ActionBarActivity {
         setContentView(R.layout.activity_main);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         Log.d("myLogs", "in onCreate: time1 = " + time1 + ", time2 = " + time2);
+        of = getResources().getString(R.string.progress_word_of);
+
 
         asyncReader = new AsyncReader();
         if(savedInstanceState == null) {
@@ -115,8 +116,7 @@ public class ActivityMain extends ActionBarActivity {
         pageLeft = (FrameLayout) findViewById(R.id.page_left);
         pageRight = (FrameLayout) findViewById(R.id.page_right);
 
-        playPause = (ImageButton) findViewById(R.id.play_pause);
-        nextChapter = (Button) findViewById(R.id.button_next_chapter);
+        fab = (FloatingActionButton) findViewById(R.id.floatingActionButton);
 
         //Runnable
 
@@ -142,7 +142,7 @@ public class ActivityMain extends ActionBarActivity {
                     if(i == words.length - 1) { //Конец главы
                         isReading = false;
                         isPaused = true;
-                        if(sectionNumber != chapters.size() - 1) isNext = true;
+                        if(chapterNumber != chapters.size() - 1) isNext = true;
                     }
                     final int currentPosition = i;
                     final String wordToShow = word;
@@ -150,12 +150,13 @@ public class ActivityMain extends ActionBarActivity {
                         @Override
                         public void run() {
                             textView.setText(wordToShow);
-                            progress.setText((currentPosition+1) + " of " + words.length + ": " + calculateProgress((currentPosition+1), words.length) + "%");
+                            progress.setText(calculateProgress(currentPosition, words.length));
                             if(isNext) {
-                                nextChapter.setVisibility(View.VISIBLE);
-                                playPause.setVisibility(View.GONE);
+                                //nextChapter.setVisibility(View.VISIBLE);
+                                //playPause.setVisibility(View.GONE);
+                                fab.setImageResource(R.drawable.ic_skip_next_white_48dp);
                             }
-                            if(currentPosition == words.length - 1) playPause.setImageResource(R.drawable.ic_play_arrow_grey600_48dp);
+                            //if(currentPosition == words.length - 1) fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
                         }
                     });
                     if(isNext) {
@@ -196,7 +197,7 @@ public class ActivityMain extends ActionBarActivity {
                     if(savedPosition > 0) {
                         savedPosition -= 1;
                         textView.setText(words[savedPosition]);
-                        progress.setText(savedPosition + " of " + words.length + ": " + calculateProgress(savedPosition, words.length) + "%");
+                        progress.setText(calculateProgress(savedPosition, words.length));
                     }
                 }
             }
@@ -209,13 +210,47 @@ public class ActivityMain extends ActionBarActivity {
                     if(savedPosition < words.length - 1) {
                         savedPosition += 1;
                         textView.setText(words[savedPosition]);
-                        progress.setText(savedPosition + " of " + words.length + ": " + calculateProgress(savedPosition, words.length) + "%");
+                        progress.setText(calculateProgress(savedPosition, words.length));
                     }
                 }
             }
         });
 
-        playPause.setOnClickListener(new View.OnClickListener() {
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isNext) {
+                    chapterNumber++;
+                    savedPosition = 0;
+                    words = chapters.get(chapterNumber).text.split(" ");
+                    textView.setText(words[0]);
+                    title.setText(chapters.get(chapterNumber).title);
+                    subtitle.setText(chapters.get(chapterNumber).subtitle);
+                    fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+                    progress.setText(calculateProgress(savedPosition, words.length));
+                    isNext = false;
+                } else {
+                    if(!isReading) {
+                        readThread = new Thread(runnable);
+                        readThread.start();
+                        isReading = true;
+                        isPaused = false;
+                        fab.setImageResource(R.drawable.ic_pause_white_48dp);
+                    } else {
+                        try {
+                            readThread.interrupt();
+                            isReading = false;
+                            isPaused = true;
+                            fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        });
+
+        /*playPause.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(!isReading) {
@@ -235,23 +270,24 @@ public class ActivityMain extends ActionBarActivity {
                     }
                 }
             }
-        });
+        });*/
 
-        nextChapter.setOnClickListener(new View.OnClickListener() {
+        /*nextChapter.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                sectionNumber++;
+                chapterNumber++;
                 savedPosition = 0;
-                words = chapters.get(sectionNumber).text.split(" ");
+                words = chapters.get(chapterNumber).text.split(" ");
                 textView.setText(words[0]);
-                title.setText(chapters.get(sectionNumber).title);
-                subtitle.setText(chapters.get(sectionNumber).subtitle);
+                title.setText(chapters.get(chapterNumber).title);
+                subtitle.setText(chapters.get(chapterNumber).subtitle);
                 playPause.setVisibility(View.VISIBLE);
                 playPause.setImageResource(R.drawable.ic_play_arrow_grey600_48dp);
                 nextChapter.setVisibility(View.GONE);
+                progress.setText(calculateProgress(savedPosition, words.length));
                 isNext = false;
             }
-        });
+        });*/
     }
 
     @Override
@@ -273,6 +309,14 @@ public class ActivityMain extends ActionBarActivity {
                 intent.setType("file/*");
                 startActivityForResult(intent, 5);
                 break;
+            case R.id.action_sections:
+                Intent intentSections = new Intent(this, ActivitySections.class);
+                getTitlesAndSubtitles(chapters, titles, subtitles, texts);
+                intentSections.putStringArrayListExtra(KEY_TITLES, titles);
+                intentSections.putStringArrayListExtra(KEY_SUBTITLES, subtitles);
+                intentSections.putStringArrayListExtra(KEY_TEXTS, texts);
+                startActivityForResult(intentSections, REQUEST_CODE_SECTIONS);
+                break;
             default: break;
         }
         return super.onOptionsItemSelected(item);
@@ -281,15 +325,29 @@ public class ActivityMain extends ActionBarActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        switch(requestCode) {
-            case 5:
-                if(data != null) {
-                    String path = data.getDataString();
-                    asyncReader.execute(path);
-                    Log.d("myLogs", data.getDataString());
-                }
-                break;
-            default: break;
+        if(resultCode == RESULT_OK) {
+            switch(requestCode) {
+                case 5:
+                    if(data != null) {
+                        String path = data.getDataString();
+                        if(asyncReader.getStatus() == AsyncTask.Status.RUNNING) asyncReader.cancel(true);
+                        asyncReader = new AsyncReader();
+                        asyncReader.execute(path);
+                        Log.d("myLogs", data.getDataString());
+                    }
+                    break;
+                case REQUEST_CODE_SECTIONS:
+                    chapterNumber = data.getIntExtra(KEY_CHAPTER, 0);
+                    words = chapters.get(chapterNumber).text.split(" ");
+                    textView.setText("");
+                    title.setText(chapters.get(chapterNumber).title);
+                    subtitle.setText(chapters.get(chapterNumber).subtitle);
+                    savedPosition = 0;
+                    isReading = false; isPaused = false; isNext = false;
+                    progress.setText(calculateProgress(savedPosition, words.length));
+                    break;
+                default: break;
+            }
         }
     }
 
@@ -318,6 +376,7 @@ public class ActivityMain extends ActionBarActivity {
             super.onPreExecute();
             sdcard = Environment.getExternalStorageDirectory().getAbsoluteFile();
             progressDialog = ProgressDialog.show(ActivityMain.this, "Parsing book", "Wait, please");
+            builder = null;
         }
 
         @Override
@@ -350,6 +409,9 @@ public class ActivityMain extends ActionBarActivity {
             super.onPostExecute(sections);
             progressDialog.dismiss();
             chapters = new ArrayList<>(sections);
+            titles = new ArrayList<>();
+            subtitles = new ArrayList<>();
+            texts = new ArrayList<>();
             words = chapters.get(0).text.split(" ");
             textView.setText("");
             layoutControl.setVisibility(View.VISIBLE);
@@ -359,14 +421,30 @@ public class ActivityMain extends ActionBarActivity {
             layoutChapter.setVisibility(View.VISIBLE);
             title.setText(chapters.get(0).title);
             subtitle.setText(chapters.get(0).subtitle);
-            playPause.setVisibility(View.VISIBLE);
+            savedPosition = 0;
+            isReading = false; isPaused = false; isNext = false;
+            fab.setVisibility(View.VISIBLE);
         }
     }
 
     public String calculateProgress(int position, int length) {
-        double progress = ((double) position / (double) length) * 100;
+        String of = getResources().getString(R.string.progress_word_of);
+        double progress = ((double) (position+1) / (double) length) * 100;
         String result = String.valueOf(progress);
-        return result.substring(0, result.indexOf(".") + 2);
+        //savedPosition + " " + of + " " + words.length + ": " + calculateProgress(savedPosition, words.length) + "%"
+        return (position+1) + " " + of + " " + length + ": " + result.substring(0, result.indexOf(".") + 2) + "%";
+    }
+
+    public void getTitlesAndSubtitles(ArrayList<Section> chapters, ArrayList<String> titles,
+                                      ArrayList<String> subtitles, ArrayList<String> texts) {
+        titles.clear();
+        subtitles.clear();
+        texts.clear();
+        for(int i = 0; i < chapters.size(); i++) {
+            titles.add(chapters.get(i).title);
+            subtitles.add(chapters.get(i).subtitle);
+            texts.add(chapters.get(i).text.substring(0, 124) + "...");
+        }
     }
 
     /*public static void startSectionsActivity(Context context) {
