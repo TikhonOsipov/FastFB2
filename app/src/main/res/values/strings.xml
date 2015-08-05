@@ -8,4 +8,5 @@
     <string name="edit_text_preference_time_1">Time 1</string>
     <string name="edit_text_preference_time_2">Time 2</string>
     <string name="activity_settings_subtitle">Settings</string>
+    <string name="activity_sections_subtitle">Chapters</string>
 </resources>
