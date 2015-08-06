@@ -31,6 +31,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 public class ActivityMain extends AppCompatActivity {
 
+    private Menu myMenu;
     SharedPreferences preferences;
     DocumentBuilder builder;
     Document document;
@@ -41,6 +42,7 @@ public class ActivityMain extends AppCompatActivity {
     int time1 = 199;
     int time2 = 299;
     public int chapterNumber = 0;
+    public int subtitleNumber = 0;
     boolean isReading = false;
     boolean isPaused = false;
     boolean isNext = false;
@@ -57,6 +59,7 @@ public class ActivityMain extends AppCompatActivity {
     private static final String KEY_TEXTS = "array_list_texts";
 
     private static final String KEY_CHAPTER = "key_chapter";
+    private static final String KEY_SUBTITLE = "key_subtitle";
     private static final int REQUEST_CODE_SECTIONS = 6;
 
     //Threads
@@ -67,9 +70,7 @@ public class ActivityMain extends AppCompatActivity {
     LinearLayout layoutControl, layoutBookInfo, layoutChapter;
     FrameLayout pageLeft, pageRight;
     Toolbar toolbar;
-    //ImageButton playPause;
-    //Button nextChapter;
-    android.support.design.widget.FloatingActionButton fab;
+    FloatingActionButton fab;
 
     @Override
     protected void onResume() {
@@ -92,16 +93,6 @@ public class ActivityMain extends AppCompatActivity {
         of = getResources().getString(R.string.progress_word_of);
 
         asyncReader = new AsyncReader();
-        if(savedInstanceState == null) {
-            //Read FB2 file and parse it
-            //asyncReader.execute("/Download/bronte_sharlotta_dzhen_yeir.fb2");
-            //asyncReader.execute("/Download/9.fb2");
-        } else {
-            words = savedInstanceState.getStringArray(KEY_WORDS);
-            savedPosition = savedInstanceState.getInt(KEY_SAVED_POSITION, 0);
-            isReading = savedInstanceState.getBoolean(KEY_IS_READING, false);
-            isPaused = savedInstanceState.getBoolean(KEY_IS_PAUSED, false);
-        }
 
         textView = (TextView) findViewById(R.id.textView);
         progress = (TextView) findViewById(R.id.progress);
@@ -123,15 +114,45 @@ public class ActivityMain extends AppCompatActivity {
         toolbar.setTitle(R.string.app_name);
         setSupportActionBar(toolbar);
 
+        titles = new ArrayList<>();
+        subtitles = new ArrayList<>();
+        texts = new ArrayList<>();
+
+        //Todo: savedPosition
+        if(savedInstanceState != null) {
+            layoutBookInfo.setVisibility(View.VISIBLE);
+            layoutChapter.setVisibility(View.VISIBLE);
+            isReading = savedInstanceState.getBoolean(KEY_IS_READING, false);
+            isPaused = savedInstanceState.getBoolean(KEY_IS_PAUSED, false);
+            if(savedInstanceState.getStringArray(KEY_WORDS) != null) {
+                isReading = false;
+                isPaused = true;
+            }
+            if(!isReading && isPaused) {
+                layoutControl.setVisibility(View.VISIBLE);
+                fab.setVisibility(View.VISIBLE);
+                author.setText(savedInstanceState.getString("author_info"));
+                bookName.setText(savedInstanceState.getString("book_name"));
+                title.setText(savedInstanceState.getString("saved_title"));
+                subtitle.setText(savedInstanceState.getString("saved_subtitle"));
+                chapterNumber = savedInstanceState.getInt("chapterNumber", 0);
+                subtitleNumber = savedInstanceState.getInt("subtitleNumber", 0);
+                words = savedInstanceState.getStringArray(KEY_WORDS);
+                savedPosition = savedInstanceState.getInt(KEY_SAVED_POSITION, 0);
+                textView.setText(words[savedPosition]);
+            }
+        }
+
         //Runnable
 
         final Handler handler = new Handler();
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                String word = "";
+                String word;
                 for (int i = savedPosition; i < words.length; i++) {
                     word = words[i];
+                    savedPosition = i;
                     if(!isReading) {
                         //Прерывание потока: пауза
                         savedPosition = i;
@@ -147,7 +168,11 @@ public class ActivityMain extends AppCompatActivity {
                     if(i == words.length - 1) { //Конец главы
                         isReading = false;
                         isPaused = true;
-                        if(chapterNumber != chapters.size() - 1) isNext = true;
+                        if(chapterNumber != chapters.size() - 1) {
+                            if(subtitleNumber != subtitles.size() - 1) {
+                                isNext = true;
+                            }
+                        }
                     }
                     final int currentPosition = i;
                     final String wordToShow = word;
@@ -158,8 +183,6 @@ public class ActivityMain extends AppCompatActivity {
                             progress.setText(calculateProgress(currentPosition, words.length));
                             if(currentPosition == words.length - 1) fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
                             if(isNext) {
-                                //nextChapter.setVisibility(View.VISIBLE);
-                                //playPause.setVisibility(View.GONE);
                                 fab.setImageResource(R.drawable.ic_skip_next_white_48dp);
                             }
                         }
@@ -181,6 +204,9 @@ public class ActivityMain extends AppCompatActivity {
                             Thread.sleep(tTime2);
                         else Thread.sleep(tTime1);
                     } catch (InterruptedException e) {
+                        savedPosition = i;
+                        isReading = false;
+                        isPaused = true;
                         e.printStackTrace();
                     }
                 }
@@ -229,12 +255,15 @@ public class ActivityMain extends AppCompatActivity {
             public void onClick(View v) {
                 progress.setVisibility(View.VISIBLE);
                 if(isNext) {
-                    chapterNumber++;
+                    if(subtitleNumber == chapters.get(chapterNumber).subtitles.size()-1) {
+                        chapterNumber++;
+                        subtitleNumber = 0;
+                    } else subtitleNumber++;
                     savedPosition = 0;
-                    words = chapters.get(chapterNumber).text.split(" ");
+                    words = chapters.get(chapterNumber).texts.get(subtitleNumber).split(" ");
                     textView.setText(words[0]);
                     title.setText(chapters.get(chapterNumber).title);
-                    subtitle.setText(chapters.get(chapterNumber).subtitle);
+                    subtitle.setText(chapters.get(chapterNumber).subtitles.get(subtitleNumber));
                     fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
                     progress.setText(calculateProgress(savedPosition, words.length));
                     isNext = false;
@@ -261,9 +290,24 @@ public class ActivityMain extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            //readThread.interrupt();
+            isReading = false;
+            isPaused = true;
+            fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_activity_main, menu);
+        myMenu = menu;
+        if(words != null) getMenuInflater().inflate(R.menu.menu_activity_main, menu);
+        else getMenuInflater().inflate(R.menu.menu_activity_main_no_book, menu);
         return true;
     }
 
@@ -308,10 +352,11 @@ public class ActivityMain extends AppCompatActivity {
                     break;
                 case REQUEST_CODE_SECTIONS:
                     chapterNumber = data.getIntExtra(KEY_CHAPTER, 0);
-                    words = chapters.get(chapterNumber).text.split(" ");
+                    subtitleNumber = data.getIntExtra(KEY_SUBTITLE, 0);
+                    words = chapters.get(chapterNumber).texts.get(subtitleNumber).split(" ");
                     textView.setText("");
                     title.setText(chapters.get(chapterNumber).title);
-                    subtitle.setText(chapters.get(chapterNumber).subtitle);
+                    subtitle.setText(chapters.get(chapterNumber).subtitles.get(subtitleNumber));
                     savedPosition = 0;
                     isReading = false; isPaused = false; isNext = false;
                     progress.setText(calculateProgress(savedPosition, words.length));
@@ -327,19 +372,9 @@ public class ActivityMain extends AppCompatActivity {
         isReading = false;
     }
 
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putStringArray(KEY_WORDS, words);
-        outState.putInt(KEY_SAVED_POSITION, savedPosition);
-        outState.putBoolean(KEY_IS_READING, isReading);
-        outState.putBoolean(KEY_IS_PAUSED, isPaused);
-    }
-
     class AsyncReader extends AsyncTask<String, Void, ArrayList<Section>> {
         File sdcard, file;
         ProgressDialog progressDialog;
-        StringBuilder text = new StringBuilder();
 
         @Override
         protected void onPreExecute() {
@@ -354,9 +389,9 @@ public class ActivityMain extends AppCompatActivity {
             try {
                 StringBuilder path = new StringBuilder();
                 path.append(params[0]);
-                Log.d("myLogs", "path1 = " + path);
+                //Log.d("myLogs", "path1 = " + path);
                 path.delete(0, path.indexOf("/emulated/0") + ("/emulated/0").length());
-                Log.d("myLogs", "path2 = " + path);
+                //Log.d("myLogs", "path2 = " + path);
                 file = new File(sdcard, path.toString());
                 if (builder == null) {
                     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -364,25 +399,25 @@ public class ActivityMain extends AppCompatActivity {
                     document = builder.parse(file);
                     //code from here is in "/desktop/code.txt"
                     Fb2Parser parser = new Fb2Parser(document);
-                    //text.append(parser.parse());
                     parser.parse();
-                    System.out.println("1");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            return Fb2Parser.sections;
+            return Body.chapters;
         }
 
         @Override
         protected void onPostExecute(ArrayList<Section> sections) {
             super.onPostExecute(sections);
             progressDialog.dismiss();
+            myMenu.clear();
+            getMenuInflater().inflate(R.menu.menu_activity_main, myMenu);
             chapters = new ArrayList<>(sections);
             titles = new ArrayList<>();
             subtitles = new ArrayList<>();
             texts = new ArrayList<>();
-            words = chapters.get(0).text.split(" ");
+            words = chapters.get(0).texts.get(0).split(" ");
             textView.setText("");
             layoutControl.setVisibility(View.VISIBLE);
             layoutBookInfo.setVisibility(View.VISIBLE);
@@ -390,7 +425,7 @@ public class ActivityMain extends AppCompatActivity {
             bookName.setText(TitleInfo.bookTitle);
             layoutChapter.setVisibility(View.VISIBLE);
             title.setText(chapters.get(0).title);
-            subtitle.setText(chapters.get(0).subtitle);
+            subtitle.setText(chapters.get(0).subtitles.get(0));
             savedPosition = 0;
             isReading = false; isPaused = false; isNext = false;
             fab.setVisibility(View.VISIBLE);
@@ -399,11 +434,28 @@ public class ActivityMain extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putStringArray(KEY_WORDS, words);
+        outState.putInt(KEY_SAVED_POSITION, savedPosition);
+        outState.putInt("chapterNumber", chapterNumber);
+        outState.putInt("subtitleNumber", subtitleNumber);
+        outState.putBoolean(KEY_IS_READING, isReading);
+        outState.putBoolean(KEY_IS_PAUSED, isPaused);
+        outState.putString("author_info", author.getText().toString());
+        outState.putString("book_name", bookName.getText().toString());
+        outState.putString("saved_title", title.getText().toString());
+        outState.putString("saved_subtitle", subtitle.getText().toString());
+        outState.putStringArrayList("list_titles", titles);
+        outState.putStringArrayList("list_subtitles", subtitles);
+        outState.putStringArrayList("list_texts", texts);
+    }
+
     public String calculateProgress(int position, int length) {
-        String of = getResources().getString(R.string.progress_word_of);
+        //String of = getResources().getString(R.string.progress_word_of);
         double progress = ((double) (position+1) / (double) length) * 100;
         String result = String.valueOf(progress);
-        //savedPosition + " " + of + " " + words.length + ": " + calculateProgress(savedPosition, words.length) + "%"
         return (position+1) + " " + of + " " + length + ": " + result.substring(0, result.indexOf(".") + 2) + "%";
     }
 
@@ -412,23 +464,17 @@ public class ActivityMain extends AppCompatActivity {
         titles.clear();
         subtitles.clear();
         texts.clear();
+        StringBuilder subtitlesSB, textsSB;
         for(int i = 0; i < chapters.size(); i++) {
+            subtitlesSB = new StringBuilder();
+            textsSB = new StringBuilder();
             titles.add(chapters.get(i).title);
-            subtitles.add(chapters.get(i).subtitle);
-            texts.add(chapters.get(i).text.substring(0, 124) + "...");
+            for(int j = 0; j < chapters.get(i).subtitles.size(); j++) {
+                subtitlesSB.append(chapters.get(i).subtitles.get(j)).append("\n");
+                textsSB.append(chapters.get(i).texts.get(j).substring(0, 124)).append("...").append("\n");
+            }
+            subtitles.add(subtitlesSB.toString());
+            texts.add(textsSB.toString());
         }
     }
-
-    /*public static void startSectionsActivity(Context context) {
-        ArrayList<String> titles = new ArrayList<>();
-        ArrayList<String> subtitles = new ArrayList<>();
-        for(int i = 0; i < chapters.size(); i++) {
-            titles.add(chapters.get(i).title);
-            subtitles.add(chapters.get(i).subtitle);
-        }
-        Intent intentStartSectionsActivity = new Intent(context, ActivitySections.class);
-        intentStartSectionsActivity.putStringArrayListExtra(KEY_TITLES, titles);
-        intentStartSectionsActivity.putStringArrayListExtra(KEY_SUBTITLES, subtitles);
-
-    }*/
 }

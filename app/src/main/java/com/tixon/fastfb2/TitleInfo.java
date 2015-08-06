@@ -5,8 +5,6 @@ import org.w3c.dom.NodeList;
 
 public class TitleInfo extends Info {
     public static String genre, bookTitle, annotation, date, lang, srcLang;
-    public String authorFirstName = "", authorMiddleName = "", authorLastName = "";
-    public String translatorFirstName = "", translatorMiddleName = "", translatorLastName = "";
 
     public static Person author, translator;
 
@@ -22,31 +20,31 @@ public class TitleInfo extends Info {
     public static final String MIDDLE_NAME = "middle-name";
     public static final String LAST_NAME = "last-name";
 
-    public TitleInfo(String genre, String bookTitle, String annotation, String date, String lang, String srcLang) {
-        this.genre = genre;
-        this.bookTitle = bookTitle;
-        this.annotation = annotation;
-        this.date = date;
-        this.lang = lang;
-        this.srcLang = srcLang;
-    }
+    /*public TitleInfo(String genre, String bookTitle, String annotation, String date, String lang, String srcLang) {
+        genre = genre;
+        bookTitle = bookTitle;
+        annotation = annotation;
+        date = date;
+        lang = lang;
+        srcLang = srcLang;
+    }*/
 
     public TitleInfo(NodeList titleInfo) {
-        this.genre = getSingleInfo(titleInfo, GENRE);
-        this.bookTitle = getSingleInfo(titleInfo, BOOK_TITLE);
-        this.annotation = getSingleInfo(titleInfo, ANNOTATION);
-        this.date = getSingleInfo(titleInfo, DATE);
-        this.lang = getSingleInfo(titleInfo, LANG);
-        this.srcLang = getSingleInfo(titleInfo, SRC_LANG);
-        this.author = getPerson(titleInfo, AUTHOR);
-        this.translator = getPerson(titleInfo, TRANSLATOR);
+        genre = getSingleInfo(titleInfo, GENRE);
+        bookTitle = getSingleInfo(titleInfo, BOOK_TITLE);
+        annotation = getSingleInfo(titleInfo, ANNOTATION);
+        date = getSingleInfo(titleInfo, DATE);
+        lang = getSingleInfo(titleInfo, LANG);
+        srcLang = getSingleInfo(titleInfo, SRC_LANG);
+        author = getPerson(titleInfo, AUTHOR);
+        translator = getPerson(titleInfo, TRANSLATOR);
     }
 
     public String getSingleInfo(NodeList where, String condition) {
         String info = "";
         for(int i = 0; i < where.getLength(); i++) {
             if(where.item(i) instanceof Element) {
-                if(((Element) where.item(i) != null) && ((Element) where.item(i)).getTagName().equals(condition)) {
+                if((where.item(i) != null) && ((Element) where.item(i)).getTagName().equals(condition)) {
                     info =  where.item(i).getTextContent();
                 }
             }
@@ -59,7 +57,7 @@ public class TitleInfo extends Info {
         String firstName = "", middleName = "", lastName = "";
         for(int i = 0; i < parent.getLength(); i++) {
             if(parent.item(i) instanceof Element) {
-                if(((Element) parent.item(i) != null) && ((Element) parent.item(i)).getTagName().equals(conditionParent)) {
+                if((parent.item(i) != null) && ((Element) parent.item(i)).getTagName().equals(conditionParent)) {
                     personNodeList = parent.item(i).getChildNodes();
                     break;
                 }
@@ -68,7 +66,7 @@ public class TitleInfo extends Info {
         if(personNodeList != null) {
             for(int i = 0; i < personNodeList.getLength(); i++) {
                 if(personNodeList.item(i) instanceof Element) {
-                    if(((Element) personNodeList.item(i) != null)) {
+                    if((personNodeList.item(i) != null)) {
                         if(((Element) personNodeList.item(i)).getTagName().equals(FIRST_NAME)) {
                             firstName = personNodeList.item(i).getTextContent();
                         }
