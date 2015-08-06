@@ -3,12 +3,18 @@
     <PreferenceCategory
         android:title="@string/category_reading">
         <EditTextPreference
-            android:title="@string/edit_text_preference_time_1"
-            android:key="time1"
-            android:defaultValue="200"/>
-        <EditTextPreference
-            android:title="@string/edit_text_preference_time_2"
-            android:key="time2"
+            android:title="@string/edit_text_preference_words_per_minute"
+            android:key="words_per_minute"
             android:defaultValue="300"/>
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="@string/category_colors">
+        <ListPreference
+            android:title="@string/list_preference_color"
+            android:summary="%s"
+            android:defaultValue="8"
+            android:key="app_color"
+            android:entries="@array/colorNames"
+            android:entryValues="@array/colorsService"/>
     </PreferenceCategory>
 </PreferenceScreen>

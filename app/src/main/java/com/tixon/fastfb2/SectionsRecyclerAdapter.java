@@ -118,7 +118,6 @@ public class SectionsRecyclerAdapter extends RecyclerView.Adapter<SectionsRecycl
         }
     }
 
-    //Todo: array index out of bounds when selecting chapter (27, -6)
     public int[] getPositions(int globalPosition) {
         int[] positions = new int[2];
         for(int i = 0; i < indexes.size() - 1; i++) {

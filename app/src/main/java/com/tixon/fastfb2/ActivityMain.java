@@ -3,6 +3,7 @@ package com.tixon.fastfb2;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -39,11 +40,13 @@ public class ActivityMain extends AppCompatActivity {
     DocumentBuilder builder;
     Document document;
     String[] words;
+    int color;
     public static ArrayList<Section> chapters;
     public ArrayList<String> titles, subtitles, texts;
     int savedPosition = 0;
-    int time1 = 199;
-    int time2 = 299;
+    int wordsPerSecond = 299;
+    int time1, time2;
+    int imagePlayResource, imagePauseResource, imageNextResource;
     public int chapterNumber = 0;
     public int subtitleNumber = 0;
     boolean isReading = false;
@@ -87,24 +90,68 @@ public class ActivityMain extends AppCompatActivity {
     Toolbar toolbar;
     FloatingActionButton fab;
 
+    void setTextColor(int color) {
+        switch(color) {
+            case 0:case 1:case 2:case 3:case 4:case 5:case 6:case 8:case 14:case 15:case 17:
+                //white
+                toolbar.setTitleTextColor(getResources().getColor(R.color.white));
+                //super.setTheme(R.style.AppThemeDark);
+                break;
+            default:
+                //black
+                toolbar.setTitleTextColor(getResources().getColor(R.color.black));
+                /*imagePlayResource = R.drawable.ic_play_arrow_black_48dp;
+                imagePauseResource = R.drawable.ic_pause_black_48dp;
+                imageNextResource = R.drawable.ic_skip_next_black_48dp;*/
+                //super.setTheme(R.style.AppThemeLight);
+                break;
+        }
+        imagePlayResource = R.drawable.ic_play_arrow_white_48dp;
+        imagePauseResource = R.drawable.ic_pause_white_48dp;
+        imageNextResource = R.drawable.ic_skip_next_white_48dp;
+        if(isNext) fab.setImageResource(imageNextResource);
+        else fab.setImageResource(imagePlayResource);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         //read settings
-        time1 = Integer.parseInt(preferences.getString("time1", "200"));
-        time2 = Integer.parseInt(preferences.getString("time2", "300"));
-        Log.d("myLogs", "in onResume: time1 = " + time1 + ", time2 = " + time2);
+        color = Integer.parseInt(preferences.getString("app_color", "8"));
+        wordsPerSecond = Integer.parseInt(preferences.getString("words_per_minute", "300"));
+        time1 = 1000 / (wordsPerSecond / 60);
+        time2 = time1 + time1 / 2;
+        Log.d("myLogs", "in onResume: wps = " + wordsPerSecond + "; time1 = " + time1 + "; time2 = " + time2);
 
+        int[][] states = new int[][] {
+                new int[] { android.R.attr.state_enabled}, // enabled
+                new int[] {-android.R.attr.state_enabled}, // disabled
+                new int[] {-android.R.attr.state_checked}, // unchecked
+                new int[] { android.R.attr.state_pressed}  // pressed
+        };
+
+        int[] colors = new int[] {
+                getResources().getIntArray(R.array.colors500)[color],
+                getResources().getIntArray(R.array.colors500)[color],
+                getResources().getIntArray(R.array.colors500)[color],
+                getResources().getIntArray(R.array.colors500)[color]
+        };
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            getWindow().setStatusBarColor(getResources().getIntArray(R.array.colors700)[color]);
+        toolbar.setBackgroundColor(getResources().getIntArray(R.array.colors500)[color]);
+        setTextColor(color);
+        fab.setBackgroundTintList(new ColorStateList(states, colors));
+        fab.setRippleColor(getResources().getIntArray(R.array.colors300)[color]);
     }
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-            getWindow().setStatusBarColor(getResources().getColor(R.color.primary700));
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        Log.d("myLogs", "in onCreate: time1 = " + time1 + ", time2 = " + time2);
+
+        Log.d("myLogs", "in onCreate: wps = " + wordsPerSecond);
         of = getResources().getString(R.string.progress_word_of);
 
         asyncReader = new AsyncReader();
@@ -135,7 +182,6 @@ public class ActivityMain extends AppCompatActivity {
 
         setTextViewPosition();
 
-        //Todo: savedPosition
         if(savedInstanceState != null) {
             layoutBookInfo.setVisibility(View.VISIBLE);
             layoutChapter.setVisibility(View.VISIBLE);
@@ -147,26 +193,29 @@ public class ActivityMain extends AppCompatActivity {
             if(words != null) {
                 isReading = false;
                 isPaused = true;
+                if(!isReading && isPaused) {
+                    layoutControl.setVisibility(View.VISIBLE);
+                    fab.setVisibility(View.VISIBLE);
+                    savedPosition = savedInstanceState.getInt(KEY_SAVED_POSITION, 0);
+                    if(savedPosition > 0) savedPosition--;
+                    author.setText(savedInstanceState.getString(KEY_AUTHOR_INFO));
+                    bookName.setText(savedInstanceState.getString(KEY_BOOK_NAME));
+                    title.setText(savedInstanceState.getString(KEY_SAVED_TITLE));
+                    subtitle.setText(savedInstanceState.getString(KEY_SAVED_SUBTITLE));
+                    progress.setText(savedInstanceState.getString(KEY_SAVED_PROGRESS));
+                    progress.setText(calculateProgress(savedPosition, words.length));
+                    chapterNumber = savedInstanceState.getInt(KEY_CHAPTER_NUMBER, 0);
+                    subtitleNumber = savedInstanceState.getInt(KEY_SUBTITLE_NUMBER, 0);
+                    if(savedPosition > 0) {
+                        if((words[savedPosition-1].length() < 4) && (savedPosition > 5))
+                            textView.setText(words[savedPosition-1] + " " + words[savedPosition]);
+                        else textView.setText(words[savedPosition]);
+                    }
+                }
             }
-            if(!isReading && isPaused) {
-                layoutControl.setVisibility(View.VISIBLE);
-                fab.setVisibility(View.VISIBLE);
-                savedPosition = savedInstanceState.getInt(KEY_SAVED_POSITION, 0);
-                if(savedPosition > 0) savedPosition--;
-                author.setText(savedInstanceState.getString(KEY_AUTHOR_INFO));
-                bookName.setText(savedInstanceState.getString(KEY_BOOK_NAME));
-                title.setText(savedInstanceState.getString(KEY_SAVED_TITLE));
-                subtitle.setText(savedInstanceState.getString(KEY_SAVED_SUBTITLE));
-                progress.setText(savedInstanceState.getString(KEY_SAVED_PROGRESS));
-                progress.setText(calculateProgress(savedPosition, words.length));
-                chapterNumber = savedInstanceState.getInt(KEY_CHAPTER_NUMBER, 0);
-                subtitleNumber = savedInstanceState.getInt(KEY_SUBTITLE_NUMBER, 0);
-                if((words[savedPosition-1].length() < 4) && (savedPosition > 5))
-                    textView.setText(words[savedPosition-1] + " " + words[savedPosition]);
-                else textView.setText(words[savedPosition]);
-            }
+
             if(isNext) {
-                fab.setImageResource(R.drawable.ic_skip_next_white_48dp);
+                fab.setImageResource(imageNextResource);
                 textView.setText(words[words.length - 1]);
                 savedPosition = words.length-1;
                 progress.setText(savedInstanceState.getString(KEY_SAVED_PROGRESS));
@@ -209,9 +258,9 @@ public class ActivityMain extends AppCompatActivity {
                         public void run() {
                             textView.setText(wordToShow);
                             progress.setText(calculateProgress(currentPosition, words.length));
-                            if(currentPosition == words.length - 1) fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+                            if(currentPosition == words.length - 1) fab.setImageResource(imagePlayResource);
                             if(isNext) {
-                                fab.setImageResource(R.drawable.ic_skip_next_white_48dp);
+                                fab.setImageResource(imageNextResource);
                             }
                         }
                     });
@@ -299,7 +348,7 @@ public class ActivityMain extends AppCompatActivity {
                     textView.setText(words[0]);
                     title.setText(chapters.get(chapterNumber).title);
                     subtitle.setText(chapters.get(chapterNumber).subtitles.get(subtitleNumber));
-                    fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+                    fab.setImageResource(imagePlayResource);
                     progress.setText(calculateProgress(savedPosition, words.length));
                     isNext = false;
                 } else {
@@ -308,13 +357,13 @@ public class ActivityMain extends AppCompatActivity {
                         readThread.start();
                         isReading = true;
                         isPaused = false;
-                        fab.setImageResource(R.drawable.ic_pause_white_48dp);
+                        fab.setImageResource(imagePauseResource);
                     } else {
                         try {
                             readThread.interrupt();
                             isReading = false;
                             isPaused = true;
-                            fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+                            fab.setImageResource(imagePlayResource);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -331,7 +380,7 @@ public class ActivityMain extends AppCompatActivity {
             //readThread.interrupt();
             isReading = false;
             isPaused = true;
-            fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+            fab.setImageResource(imagePlayResource);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -465,7 +514,7 @@ public class ActivityMain extends AppCompatActivity {
             savedPosition = 0;
             isReading = false; isPaused = false; isNext = false;
             fab.setVisibility(View.VISIBLE);
-            fab.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+            fab.setImageResource(imagePlayResource);
             progress.setVisibility(View.GONE);
         }
     }
@@ -482,10 +531,10 @@ public class ActivityMain extends AppCompatActivity {
         return s;
     }
 
-    boolean isSmall() {
+    boolean isNormal() {
         return (getResources().getConfiguration().screenLayout
         & Configuration.SCREENLAYOUT_SIZE_MASK)
-                >= Configuration.SCREENLAYOUT_SIZE_SMALL;
+                < Configuration.SCREENLAYOUT_SIZE_LARGE;
     }
 
     void setTextViewPosition() {
@@ -494,7 +543,7 @@ public class ActivityMain extends AppCompatActivity {
         p.addRule(RelativeLayout.CENTER_HORIZONTAL);
         if(getResources().getConfiguration().orientation
                 == Configuration.ORIENTATION_LANDSCAPE
-                && isSmall() && layoutChapter.getVisibility() == View.VISIBLE) {
+                && isNormal() && layoutChapter.getVisibility() == View.VISIBLE) {
             p.addRule(RelativeLayout.BELOW, R.id.layout_chapter);
         } else {
             p.addRule(RelativeLayout.CENTER_VERTICAL, R.id.textView);
