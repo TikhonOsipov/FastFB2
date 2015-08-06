@@ -103,10 +103,18 @@ public class SectionsRecyclerAdapter extends RecyclerView.Adapter<SectionsRecycl
             if(mSubtitles.length == 0) cards.add(new Card(titles.get(i), mTexts[0]));
             else cards.add(new Card(titles.get(i), mSubtitles[0], mTexts[0]));
             indexes.add(counter);
-            if(mSubtitles.length > 1) for(int j = 1; j < mSubtitles.length; j++) {
+            if(mSubtitles.length > 1)  {
+                if(mSubtitles.length == mTexts.length)
+                for(int j = 1; j < mSubtitles.length; j++) {
                     cards.add(new Card("", mSubtitles[j], mTexts[j]));
                     counter++;
                 }
+                if(mTexts.length == 1) {
+                    for(int j = 1; j < mSubtitles.length; j++) {
+                        cards.get(cards.size()-1).subtitle += "\n" + mSubtitles[j];
+                    }
+                }
+            }
         }
     }
 

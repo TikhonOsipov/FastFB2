@@ -85,25 +85,6 @@
         </FrameLayout>
     </LinearLayout>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Next chapter"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@+id/layout_chapter"
-        android:id="@+id/button_next_chapter"
-        android:visibility="gone"/>
-
-    <ImageButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:id="@+id/play_pause"
-        android:contentDescription="play/pause"
-        android:layout_below="@+id/textView"
-        android:visibility="gone"
-        android:src="@drawable/ic_play_arrow_grey600_48dp"/>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

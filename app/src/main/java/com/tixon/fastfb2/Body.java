@@ -13,6 +13,8 @@ public class Body {
 
     public static ArrayList<Section> chapters;
 
+    String tempText;
+
     public Body(NodeList body) {
         chapters = new ArrayList<>();
         getChapters(body);
