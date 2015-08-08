@@ -131,7 +131,7 @@ public class ActivityMain extends AppCompatActivity {
         time2 = time1 + time1 / 2;
         Log.d(LOG_TAG, "in onResume: wps = " + wordsPerSecond + "; time1 = " + time1 + "; time2 = " + time2);
 
-        int[][] states = new int[][] {
+        /*int[][] states = new int[][] {
                 new int[] { android.R.attr.state_enabled}, // enabled
                 new int[] {-android.R.attr.state_enabled}, // disabled
                 new int[] {-android.R.attr.state_checked}, // unchecked
@@ -139,18 +139,19 @@ public class ActivityMain extends AppCompatActivity {
         };
 
         int[] colors = new int[] {
-                getResources().getIntArray(R.array.colors500)[color],
-                getResources().getIntArray(R.array.colors500)[color],
-                getResources().getIntArray(R.array.colors500)[color],
-                getResources().getIntArray(R.array.colors500)[color]
-        };
+                getResources().getIntArray(R.array.colors500)[0],
+                getResources().getIntArray(R.array.colors500)[4],
+                getResources().getIntArray(R.array.colors500)[7],
+                getResources().getIntArray(R.array.colors500)[11]
+        };*/
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
             getWindow().setStatusBarColor(getResources().getIntArray(R.array.colors700)[color]);
         toolbar.setBackgroundColor(getResources().getIntArray(R.array.colors500)[color]);
         setTextColor(color);
-        fab.setBackgroundTintList(new ColorStateList(states, colors));
-        fab.setRippleColor(getResources().getIntArray(R.array.colors300)[color]);
+        ColorStateList rippleColor = getResources().getColorStateList(R.color.ripple_state_list);
+        fab.setBackgroundTintList(rippleColor);
+        //fab.setRippleColor(getResources().getIntArray(R.array.colors300)[color]);
     }
 
     @Override
