@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
@@ -12,6 +13,7 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -28,6 +30,7 @@ import org.w3c.dom.Document;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,7 +42,9 @@ public class ActivityMain extends AppCompatActivity {
     SharedPreferences preferences;
     DocumentBuilder builder;
     Document document;
-    String[] words;
+    SQLiteDatabase db;
+    MyDataHelper helper;
+    String[] words, dataFromDB;
     int color;
     public static ArrayList<Section> chapters;
     public ArrayList<String> titles, subtitles, texts;
@@ -54,6 +59,8 @@ public class ActivityMain extends AppCompatActivity {
     boolean isNext = false;
 
     public static String of;
+
+    private static final String LOG_TAG = "logs_activityMain";
 
     private static final String KEY_WORDS = "key_words";
     private static final String KEY_SAVED_POSITION = "key_saved_position";
@@ -87,6 +94,7 @@ public class ActivityMain extends AppCompatActivity {
     TextView textView, progress, author, bookName, title, subtitle;
     LinearLayout layoutControl, layoutBookInfo, layoutChapter;
     FrameLayout pageLeft, pageRight;
+    View content;
     Toolbar toolbar;
     FloatingActionButton fab;
 
@@ -121,7 +129,7 @@ public class ActivityMain extends AppCompatActivity {
         wordsPerSecond = Integer.parseInt(preferences.getString("words_per_minute", "300"));
         time1 = 1000 / (wordsPerSecond / 60);
         time2 = time1 + time1 / 2;
-        Log.d("myLogs", "in onResume: wps = " + wordsPerSecond + "; time1 = " + time1 + "; time2 = " + time2);
+        Log.d(LOG_TAG, "in onResume: wps = " + wordsPerSecond + "; time1 = " + time1 + "; time2 = " + time2);
 
         int[][] states = new int[][] {
                 new int[] { android.R.attr.state_enabled}, // enabled
@@ -150,8 +158,10 @@ public class ActivityMain extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        helper = new MyDataHelper(this); //get database
+        db = helper.getWritableDatabase();
 
-        Log.d("myLogs", "in onCreate: wps = " + wordsPerSecond);
+        Log.d(LOG_TAG, "in onCreate: wps = " + wordsPerSecond);
         of = getResources().getString(R.string.progress_word_of);
 
         asyncReader = new AsyncReader();
@@ -166,6 +176,7 @@ public class ActivityMain extends AppCompatActivity {
         layoutControl = (LinearLayout) findViewById(R.id.layout_control);
         layoutBookInfo = (LinearLayout) findViewById(R.id.layout_book_info);
         layoutChapter = (LinearLayout) findViewById(R.id.layout_chapter);
+        content = findViewById(R.id.coordinator);
 
         pageLeft = (FrameLayout) findViewById(R.id.page_left);
         pageRight = (FrameLayout) findViewById(R.id.page_right);
@@ -376,8 +387,25 @@ public class ActivityMain extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        Calendar c = Calendar.getInstance();
+        String date = (c.get(Calendar.DAY_OF_MONTH) > 9 ?
+                c.get(Calendar.DAY_OF_MONTH) : "0" + c.get(Calendar.DAY_OF_MONTH)) + "." +
+                (c.get(Calendar.MONTH) > 9 ?
+                        c.get(Calendar.MONTH) : "0" + c.get(Calendar.MONTH)) + "." +
+                (c.get(Calendar.YEAR) > 9 ?
+                        c.get(Calendar.YEAR) : "0" + c.get(Calendar.YEAR));
+        String time = (c.get(Calendar.HOUR) > 9 ?
+                c.get(Calendar.HOUR) : "0" + c.get(Calendar.HOUR)) + ":" +
+                (c.get(Calendar.MINUTE) > 9 ?
+                        c.get(Calendar.MINUTE) : "0" + c.get(Calendar.MINUTE)) + ":" +
+                (c.get(Calendar.SECOND) > 9 ?
+                        c.get(Calendar.SECOND) : "0" + c.get(Calendar.SECOND));
+        if (TitleInfo.bookTitle != null){
+            helper.writeBookInfo(db, TitleInfo.bookTitle, TitleInfo.author.firstName,
+                    TitleInfo.author.middleName, TitleInfo.author.lastName,
+                    chapterNumber, subtitleNumber, savedPosition, date, time);
+        }
         try {
-            //readThread.interrupt();
             isReading = false;
             isPaused = true;
             fab.setImageResource(imagePlayResource);
@@ -431,7 +459,7 @@ public class ActivityMain extends AppCompatActivity {
                         if(asyncReader.getStatus() == AsyncTask.Status.RUNNING) asyncReader.cancel(true);
                         asyncReader = new AsyncReader();
                         asyncReader.execute(path);
-                        Log.d("myLogs", data.getDataString());
+                        Log.d(LOG_TAG, data.getDataString());
                     }
                     break;
                 case REQUEST_CODE_SECTIONS:
@@ -453,6 +481,8 @@ public class ActivityMain extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        db.close();
+        helper.close();
         isReading = false;
     }
 
@@ -473,9 +503,9 @@ public class ActivityMain extends AppCompatActivity {
             try {
                 StringBuilder path = new StringBuilder();
                 path.append(params[0]);
-                //Log.d("myLogs", "path1 = " + path);
+                //Log.d(LOG_TAG, "path1 = " + path);
                 path.delete(0, path.indexOf("/emulated/0") + ("/emulated/0").length());
-                //Log.d("myLogs", "path2 = " + path);
+                //Log.d(LOG_TAG, "path2 = " + path);
                 file = new File(sdcard, path.toString());
                 if (builder == null) {
                     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -516,7 +546,39 @@ public class ActivityMain extends AppCompatActivity {
             fab.setVisibility(View.VISIBLE);
             fab.setImageResource(imagePlayResource);
             progress.setVisibility(View.GONE);
+            //if there had never been this book, then all elements are null
+            //dataFromDB[0] = chapterIndex
+            //dataFromDB[1] = subtitleIndex
+            //dataFromDB[2] = wordIndex
+            //dataFromDB[3] = data
+            //dataFromDB[4] = time
+            dataFromDB = helper.getLastBookInfo(db,
+                    TitleInfo.bookTitle,
+                    TitleInfo.author.firstName,
+                    TitleInfo.author.middleName,
+                    TitleInfo.author.lastName);
+            if(!noData(dataFromDB)) {
+                Snackbar.make(content, "You have opened this book", Snackbar.LENGTH_LONG)
+                .setAction("View", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Log.d(LOG_TAG, "snackbar button clicked");
+                    }
+                }).show();
+
+            }
         }
+    }
+
+    boolean noData(String[] array) {
+        boolean result = true;
+        for (String item : array) {
+            if (item != null) {
+                result = false;
+                break;
+            }
+        }
+        return result;
     }
 
     String addSpaces(String s) {

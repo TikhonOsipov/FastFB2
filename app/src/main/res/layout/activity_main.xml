@@ -92,15 +92,25 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="10dp"/>
-    <android.support.design.widget.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:elevation="10dp"
-        android:layout_margin="24dp"
-        android:src="@drawable/ic_play_arrow_white_48dp"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:visibility="gone"
-        android:id="@+id/floatingActionButton" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/textView">
+
+        <android.support.design.widget.CoordinatorLayout
+            android:layout_height="match_parent"
+            android:layout_width="match_parent"
+            android:id="@+id/coordinator">
+            <android.support.design.widget.FloatingActionButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:elevation="10dp"
+                android:layout_margin="24dp"
+                android:src="@drawable/ic_play_arrow_white_48dp"
+                android:visibility="gone"
+                android:layout_gravity="bottom|end"
+                android:id="@+id/floatingActionButton" />
+        </android.support.design.widget.CoordinatorLayout>
+    </FrameLayout>
 </RelativeLayout>
